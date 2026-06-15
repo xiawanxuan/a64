@@ -17,6 +17,7 @@ from app.core.exceptions import BusinessException
 from app.core.error_codes import ErrorCode
 from app.core.hyperparams import load_hyperparams
 from app.services.failure_preservation import preserve_failed_analysis
+from app.services.fault_callback import create_background_push_task
 
 hyperparams = load_hyperparams()
 
@@ -427,6 +428,70 @@ async def run_order_analysis(
         cost_ms = (time.time() - start_ts) * 1000.0
         overall_severity = max((fr.fault_severity for fr in feature_results), default=0)
         mean_speed_rpm = float(np.mean(proc_speed))
+
+        noise_floor = float(np.percentile(spectrum, 10)) if len(spectrum) >= 10 else 0.0
+        peak_idx = int(np.argmax(spectrum)) if len(spectrum) > 0 else 0
+        peak_order = float(order_axis[peak_idx]) if len(order_axis) > peak_idx else 0.0
+        peak_amp = float(spectrum[peak_idx]) if len(spectrum) > peak_idx else 0.0
+
+        push_spectrum_data = {
+            "order_values": order_axis.astype(float).tolist(),
+            "amplitude_values": spectrum.astype(float).tolist(),
+            "max_order": max_order,
+            "order_resolution": order_res,
+            "resampled_count": len(angular_signal),
+            "peak_order": peak_order,
+            "peak_amplitude": peak_amp,
+        }
+
+        push_feature_dicts = []
+        for i, fr in enumerate(feature_results):
+            push_feature_dicts.append({
+                "feature_id": feature_ids[i] if i < len(feature_ids) else None,
+                "spectrum_id": spectrum_id,
+                "turbine_id": turbine_id,
+                "gear_id": gearbox.gear_id,
+                "gear_param_id": fr.gear_param_id,
+                "stage": fr.stage,
+                "gear_type": fr.gear_type,
+                "teeth_count": fr.teeth_count,
+                "mesh_order": float(fr.mesh_order),
+                "mesh_amplitude": float(fr.mesh_amplitude),
+                "sideband_orders": [float(x) for x in fr.sideband_orders],
+                "sideband_amplitudes": [float(x) for x in fr.sideband_amplitudes],
+                "sideband_spacing": float(fr.sideband_spacing),
+                "max_sideband_amp": float(fr.max_sideband_amp),
+                "sideband_energy": float(fr.sideband_energy),
+                "kurtosis": float(fr.kurtosis) if fr.kurtosis is not None else None,
+                "crest_factor": float(fr.crest_factor) if fr.crest_factor is not None else None,
+                "rms_value": float(fr.rms_value) if fr.rms_value is not None else None,
+                "peak_value": float(fr.peak_value) if fr.peak_value is not None else None,
+                "fault_severity": int(fr.fault_severity),
+                "diagnosis_note": fr.diagnosis_note,
+            })
+
+        try:
+            create_background_push_task(
+                turbine_id=turbine_id,
+                gear_id=gearbox.gear_id,
+                analysis_start=vib_times[0],
+                analysis_end=vib_times[-1],
+                feature_results=push_feature_dicts,
+                spectrum_data=push_spectrum_data,
+                mean_speed_rpm=mean_speed_rpm,
+                overall_severity=int(overall_severity),
+                noise_floor=noise_floor,
+                analysis_cost_ms=float(cost_ms),
+                spectrum_id=spectrum_id,
+                extra_metadata={
+                    "sample_rate": int(sample_rate),
+                    "waveform_points": int(len(vib_times)),
+                    "sensor_id": sensor.sensor_id,
+                    "shaft_id": shaft_id_resolved,
+                },
+            )
+        except Exception as push_e:
+            logger.warning(f"[Callback] 创建推送后台任务失败: {push_e}")
 
         return {
             "turbine_id": turbine_id,

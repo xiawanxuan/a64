@@ -219,3 +219,31 @@ failure_preservation:
 
   # 压缩算法: gzip, zip, lz4
   compress_algorithm: "gzip"
+
+# ------------------------------
+# 故障异常回调推送 (Fault Callback Push)
+# ------------------------------
+fault_callback:
+  # 是否启用推送 (总开关, 与环境变量 FAULT_CALLBACK_ENABLED 是 AND 关系)
+  enabled: true
+
+  # 触发推送的最小故障严重度: 0正常 1预警 2报警 3严重
+  min_severity_to_push: 2
+
+  # 啮合阶次幅值绝对阈值 (超过则推送)
+  mesh_amplitude_absolute_threshold: 10.0
+
+  # 啮合阶次幅值相对阈值 (相对于噪声底的倍数, 超过则推送)
+  mesh_amplitude_noise_ratio: 10.0
+
+  # 最大边频幅值相对阈值 (相对于啮合幅值的比例, 超过则推送)
+  max_sideband_amp_ratio: 0.3
+
+  # 同风机同齿轮箱推送冷却时间 (秒), 避免短时间重复推送
+  cooldown_seconds: 300
+
+  # 推送内容是否包含完整阶次谱 (false 时只推送故障特征)
+  include_full_spectrum: false
+
+  # 推送内容是否包含边频阶次/幅值列表
+  include_sideband_details: true

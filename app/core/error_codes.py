@@ -52,6 +52,13 @@ class ErrorCode(IntEnum):
     DB_CONNECTION_FAILED = 110003
     DB_TRANSACTION_FAILED = 110004
 
+    CALLBACK_CONFIG_INVALID = 120001
+    CALLBACK_URL_INVALID = 120002
+    CALLBACK_REQUEST_FAILED = 120003
+    CALLBACK_RETRY_EXHAUSTED = 120004
+    CALLBACK_RESPONSE_ERROR = 120005
+    CALLBACK_SERIALIZATION_FAILED = 120006
+
     INTERNAL_ERROR = 999999
 
 
@@ -103,7 +110,14 @@ ERROR_MESSAGES: Dict[int, str] = {
     ErrorCode.DB_TIMESCALE_ERROR: "时序数据库操作失败",
     ErrorCode.DB_MYSQL_ERROR: "台账数据库操作失败",
     ErrorCode.DB_CONNECTION_FAILED: "数据库连接失败",
-    ErrorCode.DB_TRANSACTION_FAILED: "数据库事务失败",
+    ErrorCode.DB_TRANSACTION_FAILED: "数据库事务失败"
+
+    ErrorCode.CALLBACK_CONFIG_INVALID: "回调推送配置无效"
+    ErrorCode.CALLBACK_URL_INVALID: "回调地址格式无效"
+    ErrorCode.CALLBACK_REQUEST_FAILED: "回调请求发送失败"
+    ErrorCode.CALLBACK_RETRY_EXHAUSTED: "回调推送重试次数耗尽"
+    ErrorCode.CALLBACK_RESPONSE_ERROR: "回调响应返回错误"
+    ErrorCode.CALLBACK_SERIALIZATION_FAILED: "回调数据序列化失败"
 
     ErrorCode.INTERNAL_ERROR: "系统内部错误"
 }

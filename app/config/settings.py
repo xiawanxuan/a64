@@ -69,6 +69,15 @@ class AppSettings(BaseSettings):
     log_dir: str = Field(default="./logs", alias="LOG_DIR")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
+    # 故障回调推送配置
+    fault_callback_enabled: bool = Field(default=False, alias="FAULT_CALLBACK_ENABLED")
+    fault_callback_url: str = Field(default="", alias="FAULT_CALLBACK_URL")
+    fault_callback_timeout_sec: int = Field(default=10, alias="FAULT_CALLBACK_TIMEOUT_SEC")
+    fault_callback_max_retries: int = Field(default=3, alias="FAULT_CALLBACK_MAX_RETRIES")
+    fault_callback_retry_interval_sec: int = Field(default=2, alias="FAULT_CALLBACK_RETRY_INTERVAL_SEC")
+    fault_callback_auth_header: str = Field(default="", alias="FAULT_CALLBACK_AUTH_HEADER")
+    fault_callback_auth_token: str = Field(default="", alias="FAULT_CALLBACK_AUTH_TOKEN")
+
 
 @lru_cache()
 def get_settings() -> AppSettings:
