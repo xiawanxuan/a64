@@ -167,7 +167,7 @@ async def fetch_waveform_and_speed(
     end_time: datetime,
     min_speed: Optional[float] = None,
     max_speed: Optional[float] = None,
-) -> Tuple[List[datetime], np.ndarray, np.ndarray, List[datetime]]:
+) -> Tuple[List[datetime], np.ndarray, np.ndarray, List[datetime], int]:
     if end_time <= start_time:
         raise BusinessException(ErrorCode.QUERY_TIME_RANGE_INVALID)
 
@@ -331,14 +331,16 @@ async def run_order_analysis(
         saved_speed_vals = speed_vals.copy()
         saved_speed_times = _datetime_to_unix(speed_times)
 
-        vib_start_unix = vib_times[0].replace(tzinfo=timezone.utc).timestamp() if vib_times[0].tzinfo else vib_times[0].timestamp()
-        vib_end_unix = vib_times[-1].replace(tzinfo=timezone.utc).timestamp() if vib_times[-1].tzinfo else vib_times[-1].timestamp()
+        vib_unix_times = _datetime_to_unix(vib_times)
+        vib_start_unix = float(vib_unix_times[0]) if len(vib_unix_times) > 0 else 0.0
+        vib_end_unix = float(vib_unix_times[-1]) if len(vib_unix_times) > 0 else 0.0
 
         speed_unix_times = _datetime_to_unix(speed_times)
         aligned_speed = align_speed_to_vibration(
             speed_unix_times, speed_vals,
             vib_start_unix, vib_end_unix,
-            sample_rate, len(vib_times)
+            sample_rate, len(vib_times),
+            vib_actual_times=vib_unix_times
         )
 
         proc_waveform, proc_speed = preprocess_waveform(
@@ -348,7 +350,8 @@ async def run_order_analysis(
             proc_speed = aligned_speed
 
         angular_signal, phase_uniform, phase_orig, resample_meta = resample_to_angle_domain(
-            proc_waveform, proc_speed, sample_rate
+            proc_waveform, proc_speed, sample_rate,
+            vibration_time_axis=vib_unix_times
         )
 
         samples_per_rev = float(resample_meta.get("samples_per_rev", 0))

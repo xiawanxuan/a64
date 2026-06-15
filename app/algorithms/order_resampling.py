@@ -13,15 +13,29 @@ hyperparams = load_hyperparams()
 def compute_phase_from_speed(
     speed_rpm: np.ndarray,
     fs: float,
-    detrend: bool = True
+    detrend: bool = True,
+    time_axis: Optional[np.ndarray] = None
 ) -> np.ndarray:
-    if fs <= 0:
+    if fs <= 0 and time_axis is None:
         raise BusinessException(ErrorCode.PARAM_INVALID, "采样率必须大于0")
     if len(speed_rpm) < 2:
         raise BusinessException(ErrorCode.SPEED_DATA_INVALID, "转速数据长度不足")
 
     speed_hz = speed_rpm / 60.0
-    dt = 1.0 / fs
+
+    if time_axis is not None and len(time_axis) == len(speed_rpm):
+        dt_arr = np.diff(time_axis)
+        if np.any(dt_arr <= 0):
+            logger.warning(f"时间轴存在非递增点({np.sum(dt_arr <= 0)}个)，fallback到固定dt=1/fs")
+            dt_arr = None
+        else:
+            dt_arr = np.concatenate([[dt_arr[0]], dt_arr])
+    else:
+        dt_arr = None
+
+    if dt_arr is None:
+        dt = 1.0 / fs
+        dt_arr = np.full(len(speed_rpm), dt, dtype=np.float64)
 
     if detrend:
         speed_mean = np.mean(speed_hz)
@@ -31,7 +45,7 @@ def compute_phase_from_speed(
                 f"平均转速过低: {speed_mean * 60:.2f} rpm"
             )
 
-    phase = np.cumsum(speed_hz) * dt
+    phase = np.cumsum(speed_hz * dt_arr)
     phase = phase - phase[0]
     return phase
 
@@ -75,7 +89,8 @@ def resample_to_angle_domain(
     fs: float,
     max_order: Optional[float] = None,
     order_resolution: Optional[float] = None,
-    interpolation_method: str = "spline"
+    interpolation_method: str = "spline",
+    vibration_time_axis: Optional[np.ndarray] = None
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
     cfg = hyperparams.resampling or {}
 
@@ -101,6 +116,13 @@ def resample_to_angle_domain(
             f"波形长度({len(vibration_data)})与转速长度({len(speed_rpm)})不匹配, ratio={ratio:.3f}"
         )
 
+    if vibration_time_axis is not None and len(vibration_time_axis) != len(vibration_data):
+        logger.warning(
+            f"振动时间轴长度({len(vibration_time_axis)})与波形长度({len(vibration_data)})不匹配，"
+            f"忽略传入时间轴并fallback到固定dt=1/fs"
+        )
+        vibration_time_axis = None
+
     if len(vibration_data) < 64:
         raise BusinessException(
             ErrorCode.WAVEFORM_INSUFFICIENT_DATA,
@@ -109,7 +131,8 @@ def resample_to_angle_domain(
 
     phase = compute_phase_from_speed(
         speed_rpm, fs,
-        detrend=cfg.get("detrend_before_resample", True)
+        detrend=cfg.get("detrend_before_resample", True),
+        time_axis=vibration_time_axis
     )
 
     oversample = cfg.get("resample_oversample", 1.2)
@@ -180,14 +203,23 @@ def align_speed_to_vibration(
     vib_start_time: float,
     vib_end_time: float,
     vib_sample_rate: float,
-    vib_len: int
+    vib_len: int,
+    vib_actual_times: Optional[np.ndarray] = None
 ) -> np.ndarray:
     if len(speed_times) == 0 or len(speed_values) == 0:
         raise BusinessException(ErrorCode.SPEED_DATA_MISSING, "转速数据为空")
-    if vib_sample_rate <= 0:
+    if vib_sample_rate <= 0 and vib_actual_times is None:
         raise BusinessException(ErrorCode.PARAM_INVALID, "采样率必须为正数")
 
-    vib_time_axis = vib_start_time + np.arange(vib_len) / vib_sample_rate
+    if vib_actual_times is not None and len(vib_actual_times) == vib_len:
+        vib_time_axis = np.asarray(vib_actual_times, dtype=np.float64)
+    else:
+        if vib_actual_times is not None:
+            logger.warning(
+                f"传入的真实振动时间轴长度({len(vib_actual_times)})与波形长度({vib_len})不一致，"
+                f"fallback到等间距假设时间轴"
+            )
+        vib_time_axis = vib_start_time + np.arange(vib_len) / vib_sample_rate
 
     try:
         if len(speed_times) == 1:
@@ -201,8 +233,20 @@ def align_speed_to_vibration(
         if np.sum(valid_mask) < 2:
             raise BusinessException(ErrorCode.SPEED_DATA_INVALID, "有效转速数据点不足2个")
 
+        sorted_idx = np.argsort(speed_times[valid_mask])
+        speed_times_sorted = speed_times[valid_mask][sorted_idx]
+        speed_values_sorted = speed_values[valid_mask][sorted_idx]
+
+        if len(speed_times_sorted) >= 2:
+            dt_diff = np.diff(speed_times_sorted)
+            if np.any(dt_diff <= 0):
+                logger.warning(f"转速时间轴存在非递增点({np.sum(dt_diff <= 0)}个)，已自动去重排序")
+                unique_idx = np.concatenate([[True], dt_diff > 0])
+                speed_times_sorted = speed_times_sorted[unique_idx]
+                speed_values_sorted = speed_values_sorted[unique_idx]
+
         f = interpolate.interp1d(
-            speed_times[valid_mask], speed_values[valid_mask],
+            speed_times_sorted, speed_values_sorted,
             kind=interp_kind, bounds_error=False, fill_value="extrapolate"
         )
         aligned_speed = f(vib_time_axis)
