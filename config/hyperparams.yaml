@@ -1,0 +1,221 @@
+# ============================================================
+# 风电场设备诊断平台 - 算法超参数配置
+# 阶次重采样、阶次谱分解、故障特征提取
+# ============================================================
+
+# ------------------------------
+# 转速阶次重采样 (Order Tracking Resampling)
+# ------------------------------
+resampling:
+  # 重采样阶次分辨率 (orders)
+  order_resolution: 0.01
+
+  # 最大分析阶次 (相对于输入轴转速的倍数)
+  max_order: 100.0
+
+  # 角度域插值方法: linear, spline, cubic
+  interpolation_method: "spline"
+
+  # 转速平滑窗口大小 (样本点)
+  speed_smooth_window: 50
+
+  # 转速异常值剔除: z-score 阈值
+  speed_outlier_zscore: 3.0
+
+  # 转速最小有效值 (rpm)，低于此值视为停机
+  min_valid_speed_rpm: 2.0
+
+  # 转速信号滤波截止频率 (Hz)
+  speed_lowpass_cutoff: 2.0
+
+  # 重采样时是否去除趋势项
+  detrend_before_resample: true
+
+  # 角度域重采样点数倍率 (相对时域样本)
+  resample_oversample: 1.2
+
+# ------------------------------
+# 阶次谱分解 (Order Spectrum Decomposition)
+# ------------------------------
+spectrum:
+  # FFT 窗口类型: hann, hamming, blackman, kaiser, flattop
+  window_type: "hann"
+
+  # 窗口重叠率 (0.0 ~ 1.0)
+  window_overlap: 0.75
+
+  # 平均方式: linear, rms, peak_hold
+  averaging_method: "rms"
+
+  # 最小分段数量 (保证统计稳定性)
+  min_segments: 4
+
+  # 最大分段数量 (控制计算量)
+  max_segments: 128
+
+  # 是否对重采样信号带通滤波
+  use_bandpass_filter: true
+
+  # 阶次带通下限 (orders)
+  bandpass_order_low: 0.5
+
+  # 阶次带通上限 (orders)
+  bandpass_order_high: 95.0
+
+  # 谱线插值校正方式: none, quadratic, gaussian
+  peak_interpolation: "quadratic"
+
+  # 谱幅值归一化方式: none, max, rms, energy
+  amplitude_normalization: "max"
+
+  # 是否计算功率谱密度 (PSD)
+  compute_psd: true
+
+  # 是否计算倒谱 (Cepstrum)
+  compute_cepstrum: false
+
+# ------------------------------
+# 故障特征提取 (Fault Feature Extraction)
+# ------------------------------
+feature_extraction:
+  # 啮合阶次搜索容差 (orders)
+  mesh_order_tolerance: 0.15
+
+  # 边频阶次搜索范围: ±N 倍调制阶次
+  sideband_search_range: 5
+
+  # 调制阶次识别阈值 (与转频对齐容差)
+  modulation_order_tolerance: 0.05
+
+  # 边频显著性阈值 (相对于噪声底的倍数)
+  sideband_significance_threshold: 2.5
+
+  # 最小边频幅值 (绝对阈值)
+  min_sideband_amplitude: 1.0e-6
+
+  # 噪声底估计方式: percentile, mean_edges
+  noise_floor_method: "percentile"
+
+  # 噪声底估计百分位数
+  noise_floor_percentile: 10
+
+  # 故障严重度评估参数
+  severity:
+    # 边频能量阈值 1 (预警)
+    warning_energy_ratio: 0.15
+
+    # 边频能量阈值 2 (报警)
+    alarm_energy_ratio: 0.35
+
+    # 最大边频幅值阈值 1 (预警) - 相对于啮合幅值
+    warning_amp_ratio: 0.25
+
+    # 最大边频幅值阈值 2 (报警)
+    alarm_amp_ratio: 0.50
+
+    # 峭度阈值 1 (预警)
+    warning_kurtosis: 4.0
+
+    # 峭度阈值 2 (报警)
+    alarm_kurtosis: 6.0
+
+    # 峰值因子阈值 1 (预警)
+    warning_crest_factor: 3.5
+
+    # 峰值因子阈值 2 (报警)
+    alarm_crest_factor: 6.0
+
+  # 统计特征参数
+  statistics:
+    # 是否去趋势
+    detrend: true
+
+    # 时域窗类型 (用于统计计算)
+    time_window: "hann"
+
+    # RMS 计算时是否去直流
+    rms_remove_dc: true
+
+# ------------------------------
+# 信号预处理 (Preprocessing)
+# ------------------------------
+preprocessing:
+  # 去趋势方法: mean, linear, constant
+  detrend_method: "linear"
+
+  # 高通滤波截止频率 (Hz)
+  highpass_cutoff_hz: 0.5
+
+  # 低通滤波截止频率 (Hz)，0 表示不启用
+  lowpass_cutoff_hz: 0
+
+  # 陷波滤波器频率列表 (Hz)，用于去除电磁干扰
+  notch_frequencies: [50.0, 100.0, 150.0, 200.0]
+
+  # 陷波滤波器 Q 值
+  notch_q: 30.0
+
+  # 是否使用抗混叠滤波
+  anti_aliasing_filter: true
+
+  # 异常值处理方式: none, clip, median_filter
+  outlier_handling: "median_filter"
+
+  # 中值滤波窗口大小
+  median_filter_size: 5
+
+  # 限幅阈值 (相对于标准差的倍数)
+  clip_sigma: 10.0
+
+# ------------------------------
+# 性能与资源控制 (Performance)
+# ------------------------------
+performance:
+  # 单批次最大样本数
+  max_samples_per_batch: 4194304
+
+  # 大信号分段处理阈值 (样本点)
+  segment_threshold: 1048576
+
+  # 分段重叠率
+  segment_overlap: 0.5
+
+  # 并行处理线程数 (0 = 自动检测)
+  num_workers: 0
+
+  # 内存限制 (MB)，超过时分段处理
+  memory_limit_mb: 2048
+
+  # FFT 长度自动补零到 2 的幂次
+  fft_pad_to_power_of_two: true
+
+  # 最小 FFT 长度
+  min_fft_length: 4096
+
+  # 最大 FFT 长度
+  max_fft_length: 1048576
+
+# ------------------------------
+# 分析失败留存 (Failure Preservation)
+# ------------------------------
+failure_preservation:
+  # 是否启用失败自动留存
+  enabled: true
+
+  # 留存目录最大容量 (GB)
+  max_storage_gb: 100.0
+
+  # 自动清理阈值 (使用率百分比)
+  cleanup_threshold: 85.0
+
+  # 保留天数 (超过自动删除)
+  retention_days: 90
+
+  # 原始波形留存格式: npy, mat, csv, binary
+  waveform_format: "npy"
+
+  # 是否压缩存储
+  compress_data: true
+
+  # 压缩算法: gzip, zip, lz4
+  compress_algorithm: "gzip"

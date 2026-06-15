@@ -1,0 +1,113 @@
+from enum import IntEnum
+from typing import Dict, Tuple
+
+
+class ErrorCode(IntEnum):
+    SUCCESS = 0
+
+    PARAM_INVALID = 10001
+    PARAM_MISSING = 10002
+    PARAM_TYPE_ERROR = 10003
+    PARAM_OUT_OF_RANGE = 10004
+
+    TURBINE_NOT_FOUND = 20001
+    GEARBOX_NOT_FOUND = 20002
+    SENSOR_NOT_FOUND = 20003
+    GEAR_PARAM_NOT_FOUND = 20004
+
+    UPLOAD_CHUNK_INVALID = 30001
+    UPLOAD_CHUNK_OUT_OF_ORDER = 30002
+    UPLOAD_CHECKSUM_MISMATCH = 30003
+    UPLOAD_FILE_TOO_LARGE = 30004
+    UPLOAD_MERGE_FAILED = 30005
+    UPLOAD_BATCH_NOT_FOUND = 30006
+    UPLOAD_IN_PROGRESS = 30007
+
+    WAVEFORM_PARSE_ERROR = 40001
+    WAVEFORM_FORMAT_UNSUPPORTED = 40002
+    WAVEFORM_INSUFFICIENT_DATA = 40003
+
+    SPEED_DATA_MISSING = 50001
+    SPEED_DATA_INVALID = 50002
+    SPEED_DATA_OUT_OF_RANGE = 50003
+
+    ORDER_RESAMPLE_FAILED = 60001
+    ORDER_RESAMPLE_SPEED_TOO_LOW = 60002
+    ORDER_RESAMPLE_SIZE_MISMATCH = 60003
+
+    SPECTRUM_DECOMPOSE_FAILED = 70001
+    SPECTRUM_FFT_ERROR = 70002
+    SPECTRUM_NO_DATA = 70003
+
+    FEATURE_EXTRACT_FAILED = 80001
+    FEATURE_MESH_ORDER_NOT_FOUND = 80002
+    FEATURE_SIDEBAND_TOO_WEAK = 80003
+
+    QUERY_NO_DATA = 90001
+    QUERY_TIME_RANGE_INVALID = 90002
+    QUERY_SPEED_RANGE_INVALID = 90003
+
+    DB_TIMESCALE_ERROR = 110001
+    DB_MYSQL_ERROR = 110002
+    DB_CONNECTION_FAILED = 110003
+    DB_TRANSACTION_FAILED = 110004
+
+    INTERNAL_ERROR = 999999
+
+
+ERROR_MESSAGES: Dict[int, str] = {
+    ErrorCode.SUCCESS: "操作成功",
+
+    ErrorCode.PARAM_INVALID: "参数无效",
+    ErrorCode.PARAM_MISSING: "缺少必要参数",
+    ErrorCode.PARAM_TYPE_ERROR: "参数类型错误",
+    ErrorCode.PARAM_OUT_OF_RANGE: "参数超出有效范围",
+
+    ErrorCode.TURBINE_NOT_FOUND: "风机编号不存在",
+    ErrorCode.GEARBOX_NOT_FOUND: "齿轮箱编号不存在",
+    ErrorCode.SENSOR_NOT_FOUND: "传感器编号不存在",
+    ErrorCode.GEAR_PARAM_NOT_FOUND: "齿轮参数未配置",
+
+    ErrorCode.UPLOAD_CHUNK_INVALID: "分片编号无效",
+    ErrorCode.UPLOAD_CHUNK_OUT_OF_ORDER: "分片顺序错误",
+    ErrorCode.UPLOAD_CHECKSUM_MISMATCH: "校验和不匹配",
+    ErrorCode.UPLOAD_FILE_TOO_LARGE: "上传文件过大",
+    ErrorCode.UPLOAD_MERGE_FAILED: "分片合并失败",
+    ErrorCode.UPLOAD_BATCH_NOT_FOUND: "上传批次不存在",
+    ErrorCode.UPLOAD_IN_PROGRESS: "上传尚未完成",
+
+    ErrorCode.WAVEFORM_PARSE_ERROR: "波形二进制解析失败",
+    ErrorCode.WAVEFORM_FORMAT_UNSUPPORTED: "不支持的波形格式",
+    ErrorCode.WAVEFORM_INSUFFICIENT_DATA: "波形数据样本不足",
+
+    ErrorCode.SPEED_DATA_MISSING: "转速数据缺失",
+    ErrorCode.SPEED_DATA_INVALID: "转速数据格式错误",
+    ErrorCode.SPEED_DATA_OUT_OF_RANGE: "转速超出有效范围",
+
+    ErrorCode.ORDER_RESAMPLE_FAILED: "阶次重采样失败",
+    ErrorCode.ORDER_RESAMPLE_SPEED_TOO_LOW: "转速过低，无法进行阶次分析",
+    ErrorCode.ORDER_RESAMPLE_SIZE_MISMATCH: "波形与转速数据长度不匹配",
+
+    ErrorCode.SPECTRUM_DECOMPOSE_FAILED: "阶次谱分解失败",
+    ErrorCode.SPECTRUM_FFT_ERROR: "FFT 计算错误",
+    ErrorCode.SPECTRUM_NO_DATA: "频谱数据为空",
+
+    ErrorCode.FEATURE_EXTRACT_FAILED: "故障特征提取失败",
+    ErrorCode.FEATURE_MESH_ORDER_NOT_FOUND: "啮合阶次未在频谱中检出",
+    ErrorCode.FEATURE_SIDEBAND_TOO_WEAK: "边频特征信号过弱",
+
+    ErrorCode.QUERY_NO_DATA: "查询无匹配数据",
+    ErrorCode.QUERY_TIME_RANGE_INVALID: "时间范围参数无效",
+    ErrorCode.QUERY_SPEED_RANGE_INVALID: "转速范围参数无效",
+
+    ErrorCode.DB_TIMESCALE_ERROR: "时序数据库操作失败",
+    ErrorCode.DB_MYSQL_ERROR: "台账数据库操作失败",
+    ErrorCode.DB_CONNECTION_FAILED: "数据库连接失败",
+    ErrorCode.DB_TRANSACTION_FAILED: "数据库事务失败",
+
+    ErrorCode.INTERNAL_ERROR: "系统内部错误"
+}
+
+
+def get_error_message(code: int) -> str:
+    return ERROR_MESSAGES.get(code, "未知错误")
